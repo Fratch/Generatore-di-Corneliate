@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="it" dir="ltr">
+  <head>
+    <link rel="stylesheet" href="fogliostile.css" />
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <script src="generacorneliate.js"></script>
+    <title>GENERATORE DI CORNELIATE</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <img
+        class="title-logo"
+        src="./newscritta.png"
+        alt="newscritta"
+        width="446"
+        height="61"
+      />
+    </header>
+
+    <nav class="topnav">
+      <div class="nav-inner">
+        <a class="active" href="#home">CHI SIAMO</a>
+        <a href="#news">CONTATTI</a>
+        <a href="#about">DIRITTO D'ASILO</a>
+        <a href="#about">MURENE</a>
+        <a href="#about">EBOOK</a>
+        <a href="#about">DONAZIONI</a>
+      </div>
+    </nav>
+    <div
+      style="
+        max-width: 1100px;
+        display: flex;
+        justify-content: center;
+        margin: auto;
+        flex-direction: column;
+      "
+    >
+      <div class="nav-article-links">
+        <div class="nav-article prev">
+          <span class="label">ARTICOLO PRECEDENTE</span>
+          <a href="#" class="title">L’Europa davanti alla sua frattura</a>
+        </div>
+
+        <div class="nav-article next">
+          <span class="label">ARTICOLO SUCCESSIVO</span>
+          <a href="#" class="title">Spritz et circenses</a>
+        </div>
+      </div>
+
+      <hr class="separator" />
+
+      <h2 class="titolo" id="titolo"></h2>
+      <p style="text-align: right">di <strong>Giorgiomaria Cornelio</strong></p>
+      <p id="articolo" style="filter: blur(2px); width: 80%">
+        C’è qualcosa di sospetto in tutti quei libri che prospettano al lettore
+        qualcosa di “diverso,” di cantare fuori dal coro, di essere appunto
+        “eretici” come promette il titolo dell’ultimo saggio di Alessandro
+        Baricco “Breve storia eretica della Musica Classica.” Specialmente in
+        ambito storico, queste affermazione di diversità giustificano i
+        sospetti; il messaggio di fondo pare essere che, fin’ora, qualcuno ci
+        avesse nascosto qualcosa, qualcosa che solo ora ci viene finalmente
+        rivelato. Questo tipo di promesse raramente vengono mantenute
+        dall’autore, il più delle volte il prezzo da pagare per dire qualcosa di
+        diverso è dire semplicemente qualcosa di falso. Ciò accade perché è
+        difficile che qualcuno ci nasconda qualcosa, e nel caso specifico viene
+        difficile immaginare quali nascondimenti possano venire operati in
+        Storia della Musica. Si potrebbe pensare che anche questa Storia eretica
+        di Baricco cada nella categoria, ma non è così o meglio lo è solo in
+        parte. In cosa consiste dunque, questa eresia? Il libro ha una struttura
+        ad aforismi come La Gaia Scienza, e come ne La Gaia Scienza gli aforismi
+        variano ampiamente in lunghezza, da due righe a due pagine. Numerati, la
+        numerazione si interrompe in ognuno dei sette capitoli che affrontano in
+        ordine (quasi) cronologico la storia della musica occidentale, da
+        Pitagora (o Giamblico) a Stravinskij. Il libro inizia, come molti
+        manuali di storia della musica convenzionali, con il problema del
+        temperamento. Il tema è trattato in maniera piuttosto confusionaria, con
+        molte
+      </p>
+
+      <div class="container">
+        <div class="center">
+          <button onclick="getTitoloCornelio()">UN ALTRO TITOLO</button>
+        </div>
+      </div>
+      <div class="comment-wrapper">
+        <div class="post-meta">
+          <span class="tag">AL VOLO</span>
+          <span class="author">Giorgiomaria Cornelio</span>
+          <span class="date">19 novembre 2025</span>
+        </div>
+
+        <h2 class="comment-title">LASCIA UN COMMENTO</h2>
+
+        <form class="comment-form">
+          <textarea class="comment-textarea" placeholder="Commento:"></textarea>
+
+          <div class="comment-fields">
+            <input type="text" placeholder="Nome:*" />
+            <input type="email" placeholder="Email:*" />
+            <input type="text" placeholder="Sito Web:" />
+          </div>
+
+          <label class="remember">
+            <input type="checkbox" />
+            <span
+              >Salva nome, email e sito web in questo browser per la prossima
+              volta che commento.</span
+            >
+          </label>
+
+          <button type="submit" class="submit-btn">Pubblica Commento</button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
