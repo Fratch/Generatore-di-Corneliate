@@ -1,5 +1,5 @@
 // struttura dati per liste
-var DATA = {
+const DATA = {
   temi: [], // {A}
   verbi: [], // {V}
   concetti: [], // {C}
@@ -9,7 +9,7 @@ var DATA = {
   templates: [], // stringhe con placeholder {A},{V},{C},{L},{F},{POP}
 };
 
-var urls = {
+const urls = {
   temi: "temi.txt",
   verbi: "verbi.txt",
   concetti: "concetti.txt",
@@ -19,40 +19,68 @@ var urls = {
   templates: "templates.txt",
 };
 
+// Cache per migliorare le performance
+let cachedTemplates = null;
+
 // utility: read a text file, split by newline, trim, filter empties
 function fetchList(url) {
   return fetch(url)
     .then((resp) => {
-      if (!resp.ok) throw new Error("Fetch error " + resp.status + " " + url);
-      return resp.arrayBuffer();
+      if (!resp.ok) {
+        throw new Error(
+          `Errore nel caricamento di ${url}: ${resp.status} ${resp.statusText}`
+        );
+      }
+      return resp.text();
     })
-    .then((buffer) => {
-      const dec = new TextDecoder("utf-8");
-      return dec
-        .decode(buffer)
+    .then((text) => {
+      return text
         .split(/\r?\n/)
         .map((s) => s.trim())
         .filter((s) => s !== "");
+    })
+    .catch((err) => {
+      console.error(`Errore nel caricamento di ${url}:`, err);
+      return [];
     });
 }
 
 // carica tutti i file definiti in "urls" e popola DATA
-function loadAllLists() {
+async function loadAllLists() {
   const keys = Object.keys(urls);
-  const promises = keys.map((k) => fetchList(urls[k]));
-  return Promise.all(promises)
-    .then((results) => {
-      keys.forEach((k, i) => (DATA[k] = results[i]));
-      console.log(
-        "Lists loaded:",
-        Object.fromEntries(keys.map((k, i) => [k, DATA[k].length]))
-      );
-      // se vuoi generare automaticamente al load:
-      if (document.getElementById("titolo")) getTitoloCornelio();
-    })
-    .catch((err) => {
-      console.error("Errore caricamento liste:", err);
+  const loadingPromises = keys.map((k) => fetchList(urls[k]));
+
+  try {
+    const results = await Promise.allSettled(loadingPromises);
+
+    keys.forEach((k, i) => {
+      if (results[i].status === "fulfilled") {
+        DATA[k] = results[i].value;
+      } else {
+        console.warn(`Impossibile caricare ${k}:`, results[i].reason);
+        DATA[k] = [];
+      }
     });
+
+    console.log(
+      "Lists loaded:",
+      Object.fromEntries(keys.map((k) => [k, DATA[k].length]))
+    );
+
+    // Prepara cache per i template
+    cachedTemplates = [...DATA.templates];
+
+    // Genera automaticamente al load se l'elemento esiste
+    const titleElement = document.getElementById("titolo");
+    if (titleElement) {
+      getTitoloCornelio();
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Errore critico nel caricamento liste:", err);
+    return false;
+  }
 }
 
 // helper: pick random element or fallback empty string
@@ -73,77 +101,214 @@ function fillTemplate(template) {
     .replace(/\{POP\}/g, rnd(DATA.poprefs));
 }
 
-// funzione che “aggiusta” combinazioni scorrette di preposizione + articolo
-function fixConcordanza(titolo) {
-  // rimuove combinazioni tipo "di la", "di il", "della il", "dopo la", ecc.
-  titolo = titolo.replace(
-    /\b(di|della|del|dello|dell’)\s+(il|la|lo|l’)\b/gi,
-    "$1"
-  );
-  titolo = titolo.replace(/\b(dopo|per|sotto|sopra)\s+(il|la|lo|l’)\b/gi, "$1");
+// Mappa delle correzioni per le preposizioni articolate
+const PREPOSITION_CORRECTIONS = {
+  // Preposizione "di"
+  "di il": "del",
+  "di lo": "dello",
+  "di la": "della",
+  "di i": "dei",
+  "di gli": "degli",
+  "di le": "delle",
+  "di l'": "dell'",
 
-  // eventualmente puoi aggiungere altre regole qui
-  // es: evitare doppie virgole o spazi strani
-  titolo = titolo.replace(/\s{2,}/g, " ").trim();
-  return titolo;
+  // Preposizione "a"
+  "a il": "al",
+  "a lo": "allo",
+  "a la": "alla",
+  "a i": "ai",
+  "a gli": "agli",
+  "a le": "alle",
+  "a l'": "all'",
+
+  // Preposizione "da"
+  "da il": "dal",
+  "da lo": "dallo",
+  "da la": "dalla",
+  "da i": "dai",
+  "da gli": "dagli",
+  "da le": "dalle",
+  "da l'": "dall'",
+
+  // Preposizione "in"
+  "in il": "nel",
+  "in lo": "nello",
+  "in la": "nella",
+  "in i": "nei",
+  "in gli": "negli",
+  "in le": "nelle",
+  "in l'": "nell'",
+
+  // Preposizione "su"
+  "su il": "sul",
+  "su lo": "sullo",
+  "su la": "sulla",
+  "su i": "sui",
+  "su gli": "sugli",
+  "su le": "sulle",
+  "su l'": "sull'",
+
+  // Preposizione "con"
+  "con il": "col",
+  "con lo": "collo",
+  "con la": "colla",
+  "con i": "coi",
+  "con gli": "cogli",
+  "con le": "colle",
+
+  // Altri casi comuni
+  "tra il": "tra il", // non si apostrofa
+  "tra lo": "tra lo",
+  "tra la": "tra la",
+  "tra i": "tra i",
+  "tra gli": "tra gli",
+  "tra le": "tra le",
+  "tra l'": "tra l'",
+
+  "fra il": "fra il",
+  "fra lo": "fra lo",
+  "fra la": "fra la",
+  "fra i": "fra i",
+  "fra gli": "fra gli",
+  "fra le": "fra le",
+  "fra l'": "fra l'",
+
+  // Casi particolari con articoli indeterminativi
+  "un il": "un",
+  "un lo": "uno",
+  "un la": "una",
+  "un i": "dei",
+  "un gli": "degli",
+  "un le": "delle",
+};
+
+// funzione che corregge le concordanze grammaticali
+function fixConcordanza(titolo) {
+  if (!titolo || typeof titolo !== "string") return titolo;
+
+  let corrected = titolo;
+
+  // Applica le correzioni dalle preposizioni articolate
+  Object.keys(PREPOSITION_CORRECTIONS).forEach((wrong) => {
+    const regex = new RegExp(`\\b${wrong}\\b`, "gi");
+    corrected = corrected.replace(regex, PREPOSITION_CORRECTIONS[wrong]);
+  });
+
+  // Correzioni per elisioni e troncamenti
+  corrected = corrected
+    // Elimina doppi articoli
+    .replace(
+      /\b(della|del|dello|dell'|alla|al|allo|all'|nella|nel|nello|nell'|sulla|sul|sullo|sull')\s+(il|la|lo|i|gli|le|l')\b/gi,
+      "$1"
+    )
+    // Corregge "dopo il/la" -> "dopo il/la" (rimane invariato, ma elimina doppi)
+    .replace(
+      /\b(dopo|prima|sotto|sopra|entro)\s+(il|la|lo|i|gli|le|l')\s+(il|la|lo|i|gli|le|l')\b/gi,
+      "$1 $2"
+    )
+    // Normalizza spazi multipli e trim
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  // Capitalizza la prima lettera
+  if (corrected.length > 0) {
+    corrected = corrected.charAt(0).toUpperCase() + corrected.slice(1);
+  }
+
+  return corrected;
 }
 
 // genera un titolo (sceglie template casuale e lo riempie)
 function getTitoloCornelio() {
   if (!DATA.templates || DATA.templates.length === 0) {
     console.warn("templates vuoto: assicurati di aver caricato templates.txt");
-    document.getElementById("titolo").textContent = "— templates mancanti —";
+    const titleElement = document.getElementById("titolo");
+    if (titleElement) {
+      titleElement.textContent = "— templates mancanti —";
+    }
     return "";
   }
-  var t = rnd(DATA.templates);
-  var titolo = fillTemplate(t);
 
-  // **correzione grammaticale**
+  const template = rnd(DATA.templates);
+  let titolo = fillTemplate(template);
+
+  // Applica correzioni grammaticali
   titolo = fixConcordanza(titolo);
 
-  // se hai un elemento #titolo nell'HTML
-  var el = document.getElementById("titolo");
-  if (el) el.textContent = titolo;
+  // Aggiorna l'elemento titolo nell'HTML
+  const titleElement = document.getElementById("titolo");
+  if (titleElement) {
+    titleElement.textContent = titolo;
+    titleElement.setAttribute("aria-live", "polite");
+  }
+
   return titolo;
 }
 
-// genera n titoli (ritorna array). Mostra il primo in #titolo, e opzionalmente append in #listaTitoli
-function getTitoli(n) {
-  n = n || 1;
-  var res = [];
-  for (var i = 0; i < n; i++) {
-    res.push(getTitoloCornelio());
+// genera n titoli (ritorna array)
+function getTitoli(n = 1) {
+  const results = [];
+  for (let i = 0; i < n; i++) {
+    results.push(getTitoloCornelio());
   }
-  // se c'è un contenitore per lista, svuotalo e inserisci
-  var listEl = document.getElementById("listaTitoli");
-  if (listEl) {
-    listEl.innerHTML = "";
-    res.forEach((t) => {
-      var p = document.createElement("p");
-      p.className = "titolo-generato";
-      p.textContent = t;
-      listEl.appendChild(p);
-    });
-  }
-  return res;
+  return results;
 }
 
 // force reload (utile per sviluppo)
-function reloadData() {
-  return loadAllLists();
+async function reloadData() {
+  return await loadAllLists();
 }
 
 // mostra alcuni esempi (usato per debug o preview)
-function listExamples(count) {
-  count = count || 10;
-  var examples = [];
-  for (var i = 0; i < count; i++)
+function listExamples(count = 10) {
+  const examples = [];
+  for (let i = 0; i < count; i++) {
     examples.push(fillTemplate(rnd(DATA.templates)));
+  }
   console.log("Esempi:", examples);
   return examples;
 }
 
+// Gestione eventi UI
+function setupEventListeners() {
+  const generateBtn = document.getElementById("generate-btn");
+  const loadingIndicator = document.getElementById("loading-indicator");
+
+  if (generateBtn) {
+    generateBtn.addEventListener("click", async function () {
+      // Mostra indicatore di caricamento
+      if (loadingIndicator) {
+        loadingIndicator.classList.remove("hidden");
+        generateBtn.disabled = true;
+      }
+
+      // Simula un piccolo delay per feedback visivo
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      getTitoloCornelio();
+
+      // Nascondi indicatore
+      if (loadingIndicator) {
+        loadingIndicator.classList.add("hidden");
+        generateBtn.disabled = false;
+      }
+    });
+  }
+}
+
 // auto load
-window.addEventListener("load", function () {
-  loadAllLists();
+document.addEventListener("DOMContentLoaded", function () {
+  loadAllLists().then((success) => {
+    if (success) {
+      console.log("Generatore caricato con successo");
+    } else {
+      console.error("Errore nel caricamento del generatore");
+      const titleElement = document.getElementById("titolo");
+      if (titleElement) {
+        titleElement.textContent = "Errore nel caricamento dei dati";
+      }
+    }
+  });
+
+  setupEventListeners();
 });
