@@ -89,16 +89,54 @@ function rnd(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-// funzione che applica un singolo template: sostituisce placeholders con elementi casuali
+// funzione che applica un singolo template: sostituisce placeholders con elementi casuali NON RIPETUTI
 function fillTemplate(template) {
   // placeholders possibili: {A} {V} {C} {L} {F} {POP}
-  return template
-    .replace(/\{A\}/g, rnd(DATA.temi))
-    .replace(/\{V\}/g, rnd(DATA.verbi))
-    .replace(/\{C\}/g, rnd(DATA.concetti))
-    .replace(/\{L\}/g, rnd(DATA.luoghi))
-    .replace(/\{F\}/g, rnd(DATA.finali))
-    .replace(/\{POP\}/g, rnd(DATA.poprefs));
+  const placeholderMap = {
+    A: DATA.temi,
+    V: DATA.verbi,
+    C: DATA.concetti,
+    L: DATA.luoghi,
+    F: DATA.finali,
+    POP: DATA.poprefs,
+  };
+
+  // memoria locale delle scelte già fatte per questo template
+  const usedValues = {
+    A: new Set(),
+    V: new Set(),
+    C: new Set(),
+    L: new Set(),
+    F: new Set(),
+    POP: new Set(),
+  };
+
+  // funzione che estrae un elemento NON già usato
+  function getUnique(placeholder) {
+    const list = placeholderMap[placeholder];
+    if (!list || list.length === 0) return "";
+
+    // se abbiamo già esaurito tutti gli elementi, resettiamo la memoria
+    if (usedValues[placeholder].size >= list.length) {
+      usedValues[placeholder].clear();
+    }
+
+    let value = "";
+    let tries = 0;
+
+    // tenta fino a trovare un valore non già usato
+    do {
+      value = list[Math.floor(Math.random() * list.length)];
+      tries++;
+      if (tries > 10 * list.length) break; // fail-safe
+    } while (usedValues[placeholder].has(value));
+
+    usedValues[placeholder].add(value);
+    return value;
+  }
+
+  // sostituzione dinamica con regex che cattura il placeholder
+  return template.replace(/\{(A|V|C|L|F|POP)\}/g, (_, ph) => getUnique(ph));
 }
 
 // Mappa delle correzioni per le preposizioni articolate
